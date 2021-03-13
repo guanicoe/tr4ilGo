@@ -127,7 +127,7 @@ func processFile(work workRequest, w *worker) error {
 			leakID := 0
 			data = append(data, credRows{Email: email, HashID: hash, Username: username, Password: password, FirstSeen: fmt.Sprint(time.Now()), Host: id, Leak: leakID})
 		}
-		if len(data) > 1000 {
+		if len(data) > *BatchSize {
 			w.Mutex.Lock()
 			err = InsertRow(w.DB, credsTable, data)
 			w.Mutex.Unlock()

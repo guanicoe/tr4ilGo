@@ -82,12 +82,13 @@ var (
 		name:      "creds",
 	}
 
-	DBName   = flag.String("d", "creds.db", "Name of the database.")
-	Path     = flag.String("u", "/media/parrot/HASH DB", "Path where the raw leak files are.")
-	NWorkers = flag.Int("w", 50, "Number of workers to go scan files. Each worker will scrap one text file at a time.")
-	Parent   = flag.String("p", "Collection 1", "Name of the parent directory")
-	CleanDB  = flag.Bool("r", false, "Delets the database to start fresh. NO RETURN")
-	LogLevel = flag.String("v", "", "Log level [default: WARN | v: INFO | vv: DEBUG ]")
+	DBName    = flag.String("d", "creds.db", "Name of the database.")
+	Path      = flag.String("u", "/media/parrot/HASH DB", "Path where the raw leak files are.")
+	NWorkers  = flag.Int("w", 50, "Number of workers to go scan files. Each worker will scrap one text file at a time.")
+	Parent    = flag.String("p", "Collection 1", "Name of the parent directory")
+	CleanDB   = flag.Bool("r", false, "Delets the database to start fresh. NO RETURN")
+	LogLevel  = flag.String("v", "", "Log level [default: WARN | v: INFO | vv: DEBUG ]")
+	BatchSize = flag.Int("b", 1000, "Batch size when inserting to database. When scrapping the file list, a slice is made and when it reaches a given size, a batch INSERT is made to the database.")
 )
 
 func main() {
