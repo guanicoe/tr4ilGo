@@ -77,7 +77,7 @@ func processFile(work workRequest, w *worker) error {
 	var email, password, username, domain, seperator string
 	h := sha1.New()
 	// re := regexp.MustCompile(`.+@+\w+\.{1}\w+`)
-	err = ChangeStatus(w.DB, 1, work.Job.leakID)
+	err = ChangeStatus(w.DB, 2, work.Job.leakID)
 	CheckErr(err, "Error", "Trying to change leaks status so 1")
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -110,7 +110,7 @@ func processFile(work workRequest, w *worker) error {
 		w.Mutex.Lock()
 		id := 0
 		id, err = GetForeignKey(w.DB, "creds", "hashID", hash)
-		CheckErr(err, "Warn", "Could not get foreignkey for creds hasgID")
+		CheckErr(err, "Debug", "Could not get foreignkey for creds hasgID")
 		w.Mutex.Unlock()
 		if id == 0 {
 			w.Mutex.Lock()

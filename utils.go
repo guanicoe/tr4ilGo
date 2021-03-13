@@ -36,7 +36,7 @@ func LineCounter(f string) (int, error) {
 
 func CheckErr(err error, level, text string) {
 	if err != nil {
-		Logg(fmt.Sprint(tui.Red(text), err), level)
+		Logg(fmt.Sprint(tui.Red(text), " ", err), level)
 	}
 }
 
@@ -58,4 +58,35 @@ func Logg(text, level string) {
 		msg = tui.Blue(text)
 		log.Debug(msg)
 	}
+}
+
+//ASCIIArt simple visual printing of the logo in terminal. Ran immediately in main hence exported
+func ASCIIArt() {
+	asciiArt :=
+		`
+$$$$$$$$ $$$$$$$     $$$$$ $$$$$$$$ $$$               $$$$$$    $$$$   
+$$$$$$$$ $$$  $$$   $$$$$$ $$$$$$$$ $$$              $$$$$$$$ $$$$$$$$ 
+  $$$$	 $$$  $$$  $$  $$$   $$$$   $$$              $$$      $$$  $$$ 
+  $$$$	 $$$$$$   $$$  $$$   $$$$   $$$     $$$$$$$$ $$$ $$$$ $$$  $$$ 
+  $$$$	 $$$ $$$  $$$$$$$$   $$$$   $$$     $$$$$$$$ $$$  $$$ $$$  $$$   $$
+  $$$$	 $$$  $$$      $$$ $$$$$$$$ $$$$$$$$         $$$$$$$$ $$$$$$$$  $$$$
+  $$$$	 $$$   $$$     $$$ $$$$$$$$ $$$$$$$$          $$$$$$    $$$$     $$
+                                            GO - v0.1 guanicoe`
+	fmt.Println(tui.Wrap(tui.BOLD+tui.RED, asciiArt))
+}
+
+func printParam() {
+	paramText := fmt.Sprintf(
+		`
+###############################################################################
+
+    database name:    %s
+   Leak directory:    %s
+ Parent directory:    %s
+   Number workers:    %v
+         Reset DB:    %t
+          Verbose:    %s
+	 `,
+		*DBName, *Path, *Parent, *NWorkers, *CleanDB, LogLvl)
+	fmt.Println(tui.Wrap(tui.BOLD+tui.YELLOW, paramText))
 }

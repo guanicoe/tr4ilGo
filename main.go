@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"database/sql"
 	"encoding/hex"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -60,15 +61,9 @@ type credRows struct {
 	Leak      int
 }
 
-const (
-	DBName     = "creds.db"
-	cwd        = "/media/parrot/HASH DB"
-	parent     = "Collection 1"
-	numWorkers = 50
-)
-
 var (
 	msg        string
+	LogLvl     string
 	hostsTable = DBTable{
 		columns:   "domain, smtp, smtpPort, imap, imapPort",
 		questions: "?, ?, ?, ?, ?",
@@ -86,19 +81,48 @@ var (
 		questions: "?, ?, ?, ?, ?, ?, ?, ?",
 		name:      "creds",
 	}
+
+	DBName   = flag.String("d", "creds.db", "Name of the database.")
+	Path     = flag.String("u", "/media/parrot/HASH DB", "Path where the raw leak files are.")
+	NWorkers = flag.Int("w", 50, "Number of workers to go scan files. Each worker will scrap one text file at a time.")
+	Parent   = flag.String("p", "Collection 1", "Name of the parent directory")
+	CleanDB  = flag.Bool("r", false, "Delets the database to start fresh. NO RETURN")
+	LogLevel = flag.String("v", "", "Log level [default: WARN | v: INFO | vv: DEBUG ]")
 )
 
 func main() {
-	log.SetLevel(log.DebugLevel)
-	log.SetReportCaller(true)
 
-	os.Remove(DBName)
+	if !tui.Effects() {
+		fmt.Printf("\n\nWARNING: This terminal does not support colours, view will be very limited.\n\n")
+	}
 
-	if _, err := os.Stat(DBName); os.IsNotExist(err) {
-		msg = tui.Yellow("Database does not exist - creating creds.db...")
-		log.Warn(msg)
+	ASCIIArt()
 
-		file, err := os.Create(DBName) // Create SQLite file
+	flag.Parse()
+
+	switch {
+	case *LogLevel == "v":
+		log.SetLevel(log.InfoLevel)
+		LogLvl = "Info"
+	case *LogLevel == "vv":
+		log.SetLevel(log.DebugLevel)
+		log.SetReportCaller(true)
+		LogLvl = "Debug"
+	case *LogLevel == "":
+		log.SetLevel(log.WarnLevel)
+		LogLvl = "Warning"
+	}
+
+	printParam()
+	if *CleanDB {
+		os.Remove(*DBName)
+		Logg(fmt.Sprintf("Database '%s' was successfully deleted", *DBName), "Warn")
+	}
+
+	if _, err := os.Stat(*DBName); os.IsNotExist(err) {
+		Logg(fmt.Sprintf("Database does not exist - creating %s...", *DBName), "Warn")
+
+		file, err := os.Create(*DBName) // Create SQLite file
 		CheckErr(err, "Fatal", "Could not create database file")
 		file.Close()
 
@@ -107,7 +131,7 @@ func main() {
 
 	}
 
-	db, _ := sql.Open("sqlite3", fmt.Sprintf("./%s", DBName))
+	db, _ := sql.Open("sqlite3", fmt.Sprintf("./%s", *DBName))
 	defer db.Close()
 
 	param := JobParam{
@@ -129,15 +153,35 @@ func scanWorkingDir(param JobParam) {
 
 	sliceDir := []dirStruct{}
 
-	wd := filepath.Join(cwd, parent)
+	wd := filepath.Join(*Path, *Parent)
 	dirs, err := ioutil.ReadDir(wd)
 
 	CheckErr(err, "Fatal", fmt.Sprint("Could not open directory:", wd))
 
+	// p1 := mpb.New(mpb.WithWidth(64))
+
+	// total := len(dirs)
+	// name := "Single Bar:"
+	// // adding a single bar, which will inherit container's width
+	// bar1 := p1.Add(int64(total),
+	// 	// progress bar filler with customized style
+	// 	mpb.NewBarFiller("╢▌▌░╟"),
+	// 	mpb.PrependDecorators(
+	// 		// display our name with one space on the right
+	// 		decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
+	// 		// replace ETA decorator with "done" message, OnComplete event
+	// 		decor.OnComplete(
+	// 			decor.AverageETA(decor.ET_STYLE_GO, decor.WC{W: 4}), "done",
+	// 		),
+	// 	),
+	// 	mpb.AppendDecorators(decor.Percentage()),
+	// )
+
 	for _, d := range dirs {
+		// bar1.Increment()
 		if !(strings.Contains(d.Name(), "tar")) {
 
-			dirS = dirStruct{parent: parent,
+			dirS = dirStruct{parent: *Parent,
 				name: d.Name(),
 				path: filepath.Join(wd, d.Name()),
 			}
@@ -159,7 +203,7 @@ func scanWorkingDir(param JobParam) {
 
 					if err != nil {
 						Logg(fmt.Sprint("adding file to db: ", dirS.file, " ", id), "Debug")
-						lineNum, err = LineCounter(filepath.Join(cwd, dirS.parent, dirS.name, dirS.file))
+						lineNum, err = LineCounter(filepath.Join(*Path, dirS.parent, dirS.name, dirS.file))
 						CheckErr(err, "Warn", "Trying to count number of lines in file")
 
 						err = InsertRow(param.DB, leaksTable, []leakRows{{Name: dirS.name,
@@ -169,12 +213,10 @@ func scanWorkingDir(param JobParam) {
 							Date:       fmt.Sprint(time.Now()),
 							Website:    "reddit",
 							LineNumber: lineNum,
-							Status:     0}})
+							Status:     1}})
 
 						CheckErr(err, "Warn", fmt.Sprintf("Could not add row"))
-
 						id, err = GetForeignKey(param.DB, "leaks", "hashID", hash)
-
 						CheckErr(err, "Warn", fmt.Sprintf("Could not get leakid"))
 
 					}
@@ -183,8 +225,8 @@ func scanWorkingDir(param JobParam) {
 				}
 
 				status, err = ReadStatus(param.DB, id)
-				CheckErr(err, "Warn", fmt.Sprintf("Could not get leaks status"))
-				if status != 2 {
+				CheckErr(err, "Warn", fmt.Sprintf("Could not get leaks status with id %v, ", id))
+				if status != 3 {
 					sliceDir = append(sliceDir, dirS)
 				}
 

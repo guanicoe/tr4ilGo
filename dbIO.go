@@ -8,7 +8,7 @@ import (
 
 func CreateTable() (err error) {
 	var statement *sql.Stmt
-	db, err := sql.Open("sqlite3", fmt.Sprintf("./%s", DBName)) // Open the created SQLite File
+	db, err := sql.Open("sqlite3", fmt.Sprintf("./%s", *DBName)) // Open the created SQLite File
 	CheckErr(err, "Fatal", "Could not open sqlite database")
 	defer db.Close() // Defer Closing the database
 
@@ -81,7 +81,7 @@ func CreateTable() (err error) {
 	}
 
 	Logg("creds table created", "Debug")
-	Logg("creds.db created", "Info")
+	Logg(fmt.Sprintf("%s created", *DBName), "Info")
 	return nil
 }
 

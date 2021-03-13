@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/vbauerster/mpb"
 	"github.com/vbauerster/mpb/decor"
 )
@@ -78,7 +77,7 @@ func startProducer(param *JobParam) {
 
 	var wg sync.WaitGroup //Local wait group to wait for the main loop that is sent as a go routing
 
-	startDispatcher(ctx, numWorkers, &s) //Calling the dispatcher function that will start the workers and distribute the work
+	startDispatcher(ctx, *NWorkers, &s) //Calling the dispatcher function that will start the workers and distribute the work
 	Logg("Sending initial job ", "Debug")
 	// start := time.Now() //get time as start to give a few seconds wait before timing out if nothing is received from workers
 
@@ -153,7 +152,7 @@ func startDispatcher(ctx context.Context, n int, s *jobData) {
 	queue := make(chan chan workRequest, n)
 
 	for i := 0; i < n; i++ {
-		log.Info(fmt.Sprintf("\rStarting worker %v/%v", i+1, n))
+		Logg(fmt.Sprintf("Starting worker %v/%v", i+1, n), "Debug")
 		worker := workerNew(ctx, i+1, s.paramPointer.DB, s.paramPointer.Mutex, queue, s.Result)
 		worker.Start()
 	}
@@ -197,7 +196,7 @@ func sendWork(ctx context.Context, jobs []dirStruct, s *jobData) {
 }
 
 func processResult(ctx context.Context, r workOutput, s *jobData) {
-	err := ChangeStatus(s.paramPointer.DB, 2, r.Work.Job.leakID)
+	err := ChangeStatus(s.paramPointer.DB, 3, r.Work.Job.leakID)
 	CheckErr(err, "Error", "Could not change status in DB")
 
 }
