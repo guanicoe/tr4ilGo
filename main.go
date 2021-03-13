@@ -158,27 +158,7 @@ func scanWorkingDir(param JobParam) {
 
 	CheckErr(err, "Fatal", fmt.Sprint("Could not open directory:", wd))
 
-	// p1 := mpb.New(mpb.WithWidth(64))
-
-	// total := len(dirs)
-	// name := "Single Bar:"
-	// // adding a single bar, which will inherit container's width
-	// bar1 := p1.Add(int64(total),
-	// 	// progress bar filler with customized style
-	// 	mpb.NewBarFiller("╢▌▌░╟"),
-	// 	mpb.PrependDecorators(
-	// 		// display our name with one space on the right
-	// 		decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
-	// 		// replace ETA decorator with "done" message, OnComplete event
-	// 		decor.OnComplete(
-	// 			decor.AverageETA(decor.ET_STYLE_GO, decor.WC{W: 4}), "done",
-	// 		),
-	// 	),
-	// 	mpb.AppendDecorators(decor.Percentage()),
-	// )
-
 	for _, d := range dirs {
-		// bar1.Increment()
 		if !(strings.Contains(d.Name(), "tar")) {
 
 			dirS = dirStruct{parent: *Parent,

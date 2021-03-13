@@ -109,8 +109,8 @@ func processFile(work workRequest, w *worker) error {
 
 		w.Mutex.Lock()
 		id := 0
-		id, err = GetForeignKey(w.DB, "creds", "hashID", hash)
-		CheckErr(err, "Debug", "Could not get foreignkey for creds hasgID")
+		id, _ = GetForeignKey(w.DB, "creds", "hashID", hash)
+		// CheckErr(err, "Debug", fmt.Sprintf("Could not get foreignkey for creds hasgID: %v", id))
 		w.Mutex.Unlock()
 		if id == 0 {
 			w.Mutex.Lock()
