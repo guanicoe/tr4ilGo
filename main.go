@@ -24,7 +24,7 @@ type JobParam struct {
 	JobList []dirStruct
 }
 
-type dbTable struct {
+type DBTable struct {
 	columns   string // = "domain, smtp, smtpPort, imap, imapPort"
 	questions string //  = "?, ?, ?, ?, ?"
 	name      string // host
@@ -69,19 +69,19 @@ const (
 
 var (
 	msg        string
-	hostsTable = dbTable{
+	hostsTable = DBTable{
 		columns:   "domain, smtp, smtpPort, imap, imapPort",
 		questions: "?, ?, ?, ?, ?",
 		name:      "hosts",
 	}
 
-	leaksTable = dbTable{
+	leaksTable = DBTable{
 		columns:   "name, parent, filename, hashID, date, website, linenumber, status",
 		questions: "?, ?, ?, ?, ?, ?, ?, ?",
 		name:      "leaks",
 	}
 
-	credsTable = dbTable{
+	credsTable = DBTable{
 		columns:   "email, username, password, hashID, valid, host, firstSeen, leak",
 		questions: "?, ?, ?, ?, ?, ?, ?, ?",
 		name:      "creds",
@@ -91,6 +91,7 @@ var (
 func main() {
 	log.SetLevel(log.DebugLevel)
 	log.SetReportCaller(true)
+
 	os.Remove(DBName)
 
 	if _, err := os.Stat(DBName); os.IsNotExist(err) {
@@ -98,44 +99,40 @@ func main() {
 		log.Warn(msg)
 
 		file, err := os.Create(DBName) // Create SQLite file
-		if err != nil {
-			log.Fatal(err.Error())
-		}
+		CheckErr(err, "Fatal", "Could not create database file")
 		file.Close()
 
-		CreateTable()
+		err = CreateTable()
+		CheckErr(err, "Fatal", "Could not create tables")
 
-		msg = tui.Blue("creds.db created")
-		log.Debug(msg)
 	}
 
-	sqliteDatabase, _ := sql.Open("sqlite3", fmt.Sprintf("./%s", DBName))
+	db, _ := sql.Open("sqlite3", fmt.Sprintf("./%s", DBName))
+	defer db.Close()
 
 	param := JobParam{
-		DB:    sqliteDatabase,
+		DB:    db,
 		Mutex: &sync.Mutex{}}
+
 	scanWorkingDir(param)
-	defer sqliteDatabase.Close()
+
 }
 
 func scanWorkingDir(param JobParam) {
 	h := sha1.New()
 	var id int
 	var lineNum int
+	var status int
 	var dirS dirStruct
 
-	msg = tui.Blue("Indexing raw files...")
-	log.Debug(msg)
+	Logg("Indexing raw files...", "Debug")
 
 	sliceDir := []dirStruct{}
 
 	wd := filepath.Join(cwd, parent)
 	dirs, err := ioutil.ReadDir(wd)
 
-	if err != nil {
-		msg = tui.Red(fmt.Sprint("Could not open directory:", wd, err))
-		log.Fatal(msg)
-	}
+	CheckErr(err, "Fatal", fmt.Sprint("Could not open directory:", wd))
 
 	for _, d := range dirs {
 		if !(strings.Contains(d.Name(), "tar")) {
@@ -147,25 +144,24 @@ func scanWorkingDir(param JobParam) {
 
 			files, err := ioutil.ReadDir(dirS.path)
 			if err != nil {
-				msg = tui.Red(fmt.Sprint("Could not open directory: ", dirS.path, err))
-				log.Error(msg)
+				CheckErr(err, "Error", fmt.Sprint("Could not open directory:", dirS.path))
 				continue
 			}
 
 			for _, f := range files {
 				if strings.Contains(f.Name(), "txt") {
 					dirS.file = f.Name()
-					// add to leaks data base and grab leakID
+
 					h.Write([]byte(fmt.Sprint(dirS.parent, dirS.name, dirS.file)))
 					hash := hex.EncodeToString(h.Sum(nil))
+
 					id, err = GetForeignKey(param.DB, "leaks", "hashID", hash)
 
 					if err != nil {
-						log.Debug("adding file to db: ", dirS.file, " ", id)
-						path := filepath.Join(cwd, dirS.parent, dirS.name, dirS.file)
-						lineNum, err = LineCounter(path)
+						Logg(fmt.Sprint("adding file to db: ", dirS.file, " ", id), "Debug")
+						lineNum, err = LineCounter(filepath.Join(cwd, dirS.parent, dirS.name, dirS.file))
 						CheckErr(err, "Warn", "Trying to count number of lines in file")
-						// log.Println(fmt.Sprintf("Could not get row : %s", err))
+
 						err = InsertRow(param.DB, leaksTable, []leakRows{{Name: dirS.name,
 							Parent:     dirS.parent,
 							FileName:   dirS.file,
@@ -174,19 +170,20 @@ func scanWorkingDir(param JobParam) {
 							Website:    "reddit",
 							LineNumber: lineNum,
 							Status:     0}})
-						if err != nil {
-							log.Warn(fmt.Sprintf("Could not add row : %s", err))
-						}
+
+						CheckErr(err, "Warn", fmt.Sprintf("Could not add row"))
+
 						id, err = GetForeignKey(param.DB, "leaks", "hashID", hash)
-						if err != nil {
-							log.Warn(fmt.Sprintf("Could not add row : %s", err))
-						}
+
+						CheckErr(err, "Warn", fmt.Sprintf("Could not get leakid"))
+
 					}
 
 					dirS.leakID = id
 				}
-				var status int
+
 				status, err = ReadStatus(param.DB, id)
+				CheckErr(err, "Warn", fmt.Sprintf("Could not get leaks status"))
 				if status != 2 {
 					sliceDir = append(sliceDir, dirS)
 				}
@@ -199,15 +196,13 @@ func scanWorkingDir(param JobParam) {
 
 	param.JobList = sliceDir
 
-	msg = tui.Green("Starting job!")
-	log.Info(msg)
+	Logg("Stating job!", "Info")
 
 	startTime := time.Now()
 	startProducer(&param)
 	endTime := time.Now()
 	timeDelta := endTime.Sub(startTime)
 
-	msg = tui.Green(fmt.Sprintf("Finished job at %s - It took %s", endTime, timeDelta))
-	log.Info(msg)
+	Logg(fmt.Sprintf("Finished job at %s - It took %s", endTime, timeDelta), "Info")
 
 }

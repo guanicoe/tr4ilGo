@@ -18,12 +18,12 @@ type jobData struct {
 	paramPointer   *JobParam
 	unscrapedFiles chan string
 	unscrapedLen   int
-	fileSent       []string
-	fileSentLen    int
-	fileRecv       []string
-	fileRecvLen    int
-	continueProd   bool
-	err            error
+	//fileSent       []string
+	fileSentLen  int
+	fileRecv     []string
+	fileRecvLen  int
+	continueProd bool
+	err          error
 }
 type dirStruct struct {
 	name   string //Name folder in collection
@@ -32,10 +32,7 @@ type dirStruct struct {
 	file   string // name file in name folder
 	leakID int
 }
-type fileStr struct {
-	name  string
-	lines int
-}
+
 type workRequest struct {
 	Line string
 	Job  dirStruct
@@ -82,12 +79,10 @@ func startProducer(param *JobParam) {
 	var wg sync.WaitGroup //Local wait group to wait for the main loop that is sent as a go routing
 
 	startDispatcher(ctx, numWorkers, &s) //Calling the dispatcher function that will start the workers and distribute the work
-
-	log.Debug("Sending initial job ")
+	Logg("Sending initial job ", "Debug")
 	// start := time.Now() //get time as start to give a few seconds wait before timing out if nothing is received from workers
 
 	sendWork(ctx, s.paramPointer.JobList, &s) // starting a goroutiing of the sendWork
-	// go sendWork(ctx, s.paramPointer.JobList, &s) // starting a goroutiing of the sendWork
 	wg.Add(1)
 
 	//main loop as gorouting to listen and clean worker result and send new urls for scraping
@@ -127,7 +122,8 @@ func startProducer(param *JobParam) {
 					s.fileRecv = append(s.fileRecv, fmt.Sprint(r.Work)) //We add turl the worker scraped to our receive slice
 					s.fileRecvLen++                                     // and we increment the length
 					msg := fmt.Sprintf("Sent %v | Received %v ", s.fileSentLen, s.fileRecvLen)
-					fmt.Printf("\r%s", msg) // lazy printing of progression on terminal
+					// fmt.Printf("\r%s", msg) // lazy printing of progression on terminal
+					Logg(msg, "Info")
 					bar.Increment()
 					processResult(ctx, r, &s) // we send result to the process function
 
@@ -135,7 +131,7 @@ func startProducer(param *JobParam) {
 				}
 			}
 		}
-		p.Wait()
+
 	}(ctx, &wg)
 	wg.Wait()
 	cancel() //We cancel the context when the go loop returns
@@ -154,15 +150,13 @@ Once it gets one, it it grabs a work from the work queue and sends it to a worke
 */
 func startDispatcher(ctx context.Context, n int, s *jobData) {
 
-	// First, initialize the channel we are going to put the workers' work channels into.
-	PugsQueue := make(chan chan workRequest, n)
-	// Now, create all of our workers.
+	queue := make(chan chan workRequest, n)
+
 	for i := 0; i < n; i++ {
 		log.Info(fmt.Sprintf("\rStarting worker %v/%v", i+1, n))
-		worker := workerNew(ctx, i+1, s.paramPointer.DB, s.paramPointer.Mutex, PugsQueue, s.Result)
+		worker := workerNew(ctx, i+1, s.paramPointer.DB, s.paramPointer.Mutex, queue, s.Result)
 		worker.Start()
 	}
-	// fmt.Printf("\n")
 
 	go func(ctx context.Context, s *jobData) {
 		for {
@@ -176,7 +170,7 @@ func startDispatcher(ctx context.Context, n int, s *jobData) {
 					case <-ctx.Done():
 						return
 					default:
-						worker := <-PugsQueue
+						worker := <-queue
 						worker <- work
 					}
 
@@ -185,18 +179,8 @@ func startDispatcher(ctx context.Context, n int, s *jobData) {
 			}
 		}
 	}(ctx, s)
-	return
 }
 
-/*
-function ran in go routing from producer. This function first sends the initial
-target url, it then listens for the processresult function for unscraped urls
-and sends them to the workaueue buffered channel
-param:
-	- firstURL string initial url
-	- ctx
-	- s pointer to producer currated results
-*/
 func sendWork(ctx context.Context, jobs []dirStruct, s *jobData) {
 
 	sendToPugs := func(l dirStruct) {
@@ -209,20 +193,6 @@ func sendWork(ctx context.Context, jobs []dirStruct, s *jobData) {
 		sendToPugs(j)
 		s.fileSentLen++
 	}
-
-	// for {
-	// 	select {
-	// 	case <-ctx.Done():
-	// 		return
-	// 	case l := <-s.unscrapedURL:
-
-	// 		sendToPugs(l)
-	// 		s.scrapedSent = append(s.scrapedSent, l)
-	// 		s.scrapedSentLen++
-
-	// 	}
-
-	// }
 
 }
 

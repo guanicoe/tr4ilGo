@@ -4,15 +4,13 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
-
-	log "github.com/sirupsen/logrus"
 )
 
-func CreateTable() {
+func CreateTable() (err error) {
 	var statement *sql.Stmt
-	var err error
 	db, err := sql.Open("sqlite3", fmt.Sprintf("./%s", DBName)) // Open the created SQLite File
-	defer db.Close()                                            // Defer Closing the database
+	CheckErr(err, "Fatal", "Could not open sqlite database")
+	defer db.Close() // Defer Closing the database
 
 	createhostsTableSQL := `CREATE TABLE hosts (
 		"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,		
@@ -23,14 +21,17 @@ func CreateTable() {
 		"imapPort" INTEGER 		
 	  );` // SQL Statement for Create Table
 
-	log.Debug("Create hosts table...")
+	Logg("Create hosts table...", "Debug")
 	statement, err = db.Prepare(createhostsTableSQL) // Prepare SQL Statement
 	if err != nil {
-		log.Fatal(err.Error())
+		return err
 	}
-	statement.Exec() // Execute SQL Statements
-	log.Debug("hosts table created")
+	_, err = statement.Exec() // Execute SQL Statements
+	if err != nil {
+		return err
+	}
 
+	Logg("hosts table created", "Debug")
 	createLeaksTableSQL := `CREATE TABLE leaks (
 		"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,		
 		"name" TEXT NOT NULL,
@@ -43,13 +44,17 @@ func CreateTable() {
 		"status" INTEGER
 	  );` // SQL Statement for Create Table
 
-	log.Debug("Create leaks table...")
+	Logg("Create leaks table...", "Debug")
 	statement, err = db.Prepare(createLeaksTableSQL) // Prepare SQL Statement
 	if err != nil {
-		log.Fatal(err.Error())
+		return err
 	}
-	statement.Exec() // Execute SQL Statements
-	log.Debug("hosts table created")
+	_, err = statement.Exec() // Execute SQL Statements
+	if err != nil {
+		return err
+	}
+
+	Logg("hosts table created", "Debug")
 
 	createCredTableSQL := `CREATE TABLE creds (
 		"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,		
@@ -65,17 +70,23 @@ func CreateTable() {
 		FOREIGN KEY(leak) REFERENCES leaks(id)
 	  );` // SQL Statement for Create Table
 
-	log.Debug("Create creds table...")
+	Logg("Create creds table...", "Debug")
 	statement, err = db.Prepare(createCredTableSQL) // Prepare SQL Statement
 	if err != nil {
-		log.Fatal(err.Error())
+		return err
 	}
-	statement.Exec() // Execute SQL Statements
-	log.Debug("creds table created")
+	_, err = statement.Exec() // Execute SQL Statements
+	if err != nil {
+		return err
+	}
+
+	Logg("creds table created", "Debug")
+	Logg("creds.db created", "Info")
+	return nil
 }
 
 // We are passing db reference connection from main to our method with other parameters
-func InsertRow(db *sql.DB, tab dbTable, row interface{}) (err error) {
+func InsertRow(db *sql.DB, tab DBTable, row interface{}) (err error) {
 	numRows := reflect.ValueOf(row).Len()
 	// log.Println(fmt.Sprintf("Inserting %s record ...", tab.name))
 	insertSQL := fmt.Sprintf("INSERT INTO %s(%s) VALUES", tab.name, tab.columns)
@@ -118,7 +129,7 @@ func GetForeignKey(db *sql.DB, tab, col, val string) (id int, err error) {
 		row.Scan(&id)
 	}
 	if id == 0 {
-		return 0, fmt.Errorf("No rows where found for %s", val)
+		return 0, fmt.Errorf("no rows where found for %v", val)
 	}
 	return id, nil
 
@@ -144,7 +155,7 @@ func ChangeStatus(db *sql.DB, val, leakid int) (err error) {
 
 func ReadStatus(db *sql.DB, id int) (status int, err error) {
 	// var id int
-	row, err := db.Query(fmt.Sprintf("SELECT status FROM leaks WHERE id=%s;", id))
+	row, err := db.Query(fmt.Sprintf("SELECT status FROM leaks WHERE id=%v;", id))
 	if err != nil {
 		return -1, err
 	}
@@ -154,7 +165,7 @@ func ReadStatus(db *sql.DB, id int) (status int, err error) {
 		row.Scan(&status)
 	}
 	if status == 0 {
-		return -1, fmt.Errorf("No rows where found for %s", id)
+		return -1, fmt.Errorf("no rows where found for %v", id)
 	}
 	return status, nil
 

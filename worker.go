@@ -44,8 +44,6 @@ func workerNew(ctx context.Context, id int, db *sql.DB, mutex *sync.Mutex, pugsQ
 	return worker
 }
 
-// This method "starts" the worker by starting a goroutine, that is
-// an infinite "for-select" loop.
 func (w *worker) Start() {
 
 	go func() {
@@ -68,18 +66,15 @@ func (w *worker) Start() {
 
 func processFile(work workRequest, w *worker) error {
 
-	// fmt.Println(work)
 	filePath := filepath.Join(work.Job.path, work.Job.file)
 	file, err := os.Open(filePath)
 	if err != nil {
-		CheckErr(err, "Error", "Opening job file")
 		return err
 	}
 	scanner := bufio.NewScanner(file)
 
 	data := []credRows{}
-	var seperator string
-	var email, password, username, domain string
+	var email, password, username, domain, seperator string
 	h := sha1.New()
 	// re := regexp.MustCompile(`.+@+\w+\.{1}\w+`)
 	err = ChangeStatus(w.DB, 1, work.Job.leakID)
@@ -115,6 +110,7 @@ func processFile(work workRequest, w *worker) error {
 		w.Mutex.Lock()
 		id := 0
 		id, err = GetForeignKey(w.DB, "creds", "hashID", hash)
+		CheckErr(err, "Warn", "Could not get foreignkey for creds hasgID")
 		w.Mutex.Unlock()
 		if id == 0 {
 			w.Mutex.Lock()

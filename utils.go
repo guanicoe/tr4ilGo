@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 
@@ -35,19 +36,26 @@ func LineCounter(f string) (int, error) {
 
 func CheckErr(err error, level, text string) {
 	if err != nil {
-		switch level {
-		case "Error":
-			msg = tui.Red(text)
-			log.Error(msg, err)
-		case "Warn":
-			msg = tui.Yellow(text)
-			log.Warn(msg, err)
-		case "Info":
-			msg = tui.Green(text)
-			log.Info(msg, err)
-		case "Debug":
-			msg = tui.Blue(text)
-			log.Debug(msg, err)
-		}
+		Logg(fmt.Sprint(tui.Red(text), err), level)
+	}
+}
+
+func Logg(text, level string) {
+	switch level {
+	case "Fatal":
+		msg = tui.Red(text)
+		log.Fatal(msg)
+	case "Error":
+		msg = tui.Red(text)
+		log.Error(msg)
+	case "Warn":
+		msg = tui.Yellow(text)
+		log.Warn(msg)
+	case "Info":
+		msg = tui.Green(text)
+		log.Info(msg)
+	case "Debug":
+		msg = tui.Blue(text)
+		log.Debug(msg)
 	}
 }
