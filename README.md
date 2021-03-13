@@ -22,13 +22,6 @@ There are a few dependencies that you will also need
     go get github.com/evilsocket/islazy/tui
     go get github.com/mattn/go-sqlite3
 
-### Editing the source code for you application
-In the `main.go` file, there are a few constants that you will want to modify. Specifically 
-    
-```go
-cwd = "/media/parrot/HASH DB"
-parent = "Collection 1"
-```
 
 **IMPORTANT** : for the moment, the file structure for where the email:pwd files are is important. It needs to follow the following structure. 
 `cwd` is the name of the folder where you store your file leaks. For me it's an external HDD named `HASH DB`. Then in there you should have a folder with the collection of leaks `Parent`. For the moment, this folder is hardcoded to be named `Collection 1`, but it can be anything. 
@@ -73,6 +66,27 @@ If everything goes to correctly, you can run the program with `sudo`
 
     sudo ./tr4ilGo
     
+
+### Options
+I've added some command line parameters. You can read them by using `sudo ./tr4ilGo -h`
+
+```
+Usage of ./tr4ilGo:
+  -b int
+    	Batch size when inserting to database. When scrapping the file list, a slice is made and when it reaches a given size, a batch INSERT is made to the database. (default 1000)
+  -d string
+    	Name of the database. (default "creds.db")
+  -p string
+    	Name of the parent directory (default "Collection 1")
+  -r	Delets the database to start fresh. NO RETURN
+  -u string
+    	Path where the raw leak files are. (default "/media/parrot/HASH DB")
+  -v string
+    	Log level [default: WARN | v: INFO | vv: DEBUG ]
+  -w int
+    	Number of workers to go scan files. Each worker will scrap one text file at a time. (default 50)
+
+```
 ## TODO
 - I'll add some flexibility and some sort of menu so the program can be used in cli. 
 - I will also change the database structure as it can be obtimised. 
