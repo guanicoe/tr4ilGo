@@ -7,6 +7,8 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"path/filepath"
 	"strings"
@@ -83,7 +85,7 @@ var (
 	}
 
 	DBName    = flag.String("d", "creds.db", "Name of the database.")
-	Path      = flag.String("u", "/media/parrot/HASH DB", "Path where the raw leak files are.")
+	Path      = flag.String("u", "/media/parrot/HASHDB", "Path where the raw leak files are.")
 	NWorkers  = flag.Int("w", 50, "Number of workers to go scan files. Each worker will scrap one text file at a time.")
 	Parent    = flag.String("p", "Collection 1", "Name of the parent directory")
 	CleanDB   = flag.Bool("r", false, "Delets the database to start fresh. NO RETURN")
@@ -102,6 +104,9 @@ func main() {
 	flag.Parse()
 
 	switch {
+	case *LogLevel == "":
+		log.SetLevel(log.WarnLevel)
+		LogLvl = "Warning"
 	case *LogLevel == "v":
 		log.SetLevel(log.InfoLevel)
 		LogLvl = "Info"
@@ -109,9 +114,9 @@ func main() {
 		log.SetLevel(log.DebugLevel)
 		log.SetReportCaller(true)
 		LogLvl = "Debug"
-	case *LogLevel == "":
-		log.SetLevel(log.WarnLevel)
-		LogLvl = "Warning"
+		go func() {
+			log.Println(http.ListenAndServe("localhost:6060", nil))
+		}()
 	}
 
 	printParam()
@@ -160,7 +165,7 @@ func scanWorkingDir(param JobParam) {
 	CheckErr(err, "Fatal", fmt.Sprint("Could not open directory:", wd))
 
 	for _, d := range dirs {
-		if !(strings.Contains(d.Name(), "tar")) {
+		if !(strings.Contains(d.Name(), ".tar")) {
 
 			dirS = dirStruct{parent: *Parent,
 				name: d.Name(),
@@ -174,7 +179,7 @@ func scanWorkingDir(param JobParam) {
 			}
 
 			for _, f := range files {
-				if strings.Contains(f.Name(), "txt") {
+				if strings.Contains(f.Name(), ".txt") {
 					dirS.file = f.Name()
 
 					h.Write([]byte(fmt.Sprint(dirS.parent, dirS.name, dirS.file)))
@@ -183,7 +188,7 @@ func scanWorkingDir(param JobParam) {
 					id, err = GetForeignKey(param.DB, "leaks", "hashID", hash)
 
 					if err != nil {
-						Logg(fmt.Sprint("adding file to db: ", dirS.file, " ", id), "Debug")
+						Logg(fmt.Sprint("adding file to db: ", dirS.parent, dirS.name, dirS.file, " ", id), "Debug")
 						lineNum, err = LineCounter(filepath.Join(*Path, dirS.parent, dirS.name, dirS.file))
 						CheckErr(err, "Warn", "Trying to count number of lines in file")
 

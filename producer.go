@@ -55,11 +55,7 @@ param:
 func startProducer(param *JobParam) {
 
 	//Declare context for current job
-	var (
-		ctx    context.Context
-		cancel context.CancelFunc
-	)
-	ctx, cancel = context.WithTimeout(context.Background(), time.Second*time.Duration(20000))
+	ctx := context.Background() //, cancel = context.WithTimeout(context.Background(), time.Second*time.Duration(20000))
 	// local struct contaning all the data. only pointers are sent across
 	s := jobData{
 		WorkQueue: make(chan workRequest, 1000),
@@ -133,7 +129,7 @@ func startProducer(param *JobParam) {
 
 	}(ctx, &wg)
 	wg.Wait()
-	cancel() //We cancel the context when the go loop returns
+	// cancel() //We cancel the context when the go loop returns
 
 	// TODO: check if necessary. Quick for loop to purge the work buffered queue
 	for len(s.WorkQueue) > 0 {

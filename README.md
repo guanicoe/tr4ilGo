@@ -87,6 +87,9 @@ Usage of ./tr4ilGo:
     	Number of workers to go scan files. Each worker will scrap one text file at a time. (default 50)
 
 ```
+
+## Table structure
+The sqlite file is made of 4 tables. 
 ## TODO
 - I'll add some flexibility and some sort of menu so the program can be used in cli. 
 - I will also change the database structure as it can be obtimised. 
