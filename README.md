@@ -9,6 +9,9 @@ This software is still in alpha. It works, but I'm still trying to make it a bit
 - give me some feedback on what you want tr4ilGo to do
 - push some helpfull modification to improve the software
 
+## Known issues
+- The main issue is some sort of memory saturation. If you leave the program run for too long, it gets killed. I thing there is a variable that must become too big, but I haven't found which one yet. any ideas?
+
 ## How to use?
 This software being in alpha, there is no interface, nor command line interactions. If you want to change something, you'll need to modify the code. This will change when a beta version is reached.
 
